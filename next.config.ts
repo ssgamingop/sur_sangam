@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -21,10 +22,8 @@ const nextConfig: NextConfig = {
   webpack: (config, { isServer }) => {
     // Fix for "Module not found: Can't resolve 'async_hooks'"
     if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        async_hooks: false,
-      };
+      config.resolve.fallback = config.resolve.fallback || {};
+      config.resolve.fallback.async_hooks = false;
     }
     return config;
   },
