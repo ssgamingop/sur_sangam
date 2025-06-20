@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    // Fix for "Module not found: Can't resolve 'async_hooks'", "Module not found: Can't resolve 'net'", "Module not found: Can't resolve 'fs'", "Module not found: Can't resolve 'tls'", and "Module not found: Can't resolve 'http2'"
+    // Fix for "Module not found: Can't resolve 'async_hooks'", "Module not found: Can't resolve 'net'", "Module not found: Can't resolve 'fs'", "Module not found: Can't resolve 'tls'", "Module not found: Can't resolve 'http2'"
     // These fallbacks are for Webpack. Turbopack currently does not support webpack.resolve.fallback.
     if (!isServer) {
       config.resolve.fallback = config.resolve.fallback || {};
