@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
       config.resolve.fallback.fs = false;
       config.resolve.fallback.tls = false;
       config.resolve.fallback.http2 = false;
-      config.resolve.fallback.dns = false; // Added dns fallback
+      config.resolve.fallback.dns = false;
     }
     return config;
   },
