@@ -36,11 +36,11 @@ import { Sparkles, Music, Save, FileText, Download, Lightbulb, Play } from "luci
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
-  style: z.enum(['Bollywood', 'Classical', 'Devotional']),
+  style: z.enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop']),
   voice: z.enum(['Vega', 'Sirius', 'Spica']),
 });
 
-const musicStyles: MusicStyle[] = ['Bollywood', 'Classical', 'Devotional'];
+const musicStyles: MusicStyle[] = ['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop'];
 const musicVoices: Voice[] = ['Vega', 'Sirius', 'Spica'];
 
 

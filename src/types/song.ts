@@ -1,4 +1,4 @@
-export type MusicStyle = 'Bollywood' | 'Classical' | 'Devotional';
+export type MusicStyle = 'Bollywood' | 'Classical' | 'Devotional' | 'Folk' | 'Ghazal' | 'Sufi' | 'Pop';
 export type Voice = 'Vega' | 'Sirius' | 'Spica';
 
 export interface Song {

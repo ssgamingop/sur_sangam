@@ -20,7 +20,7 @@ const GenerateHindiLyricsInputSchema = z.object({
       'A short phrase or sentence in Hindi or English to generate lyrics from.'
     ),
   style: z
-    .enum(['Bollywood', 'Classical', 'Devotional'])
+    .enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop'])
     .describe('The style of music for the song.')
     .optional(),
 });
