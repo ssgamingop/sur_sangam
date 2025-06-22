@@ -32,7 +32,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Sparkles, Music, Save, FileText, Download, Lightbulb, Play } from "lucide-react";
+import { Sparkles, Music, Save, FileText, Download, Lightbulb, Play, Copy } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
@@ -137,6 +137,19 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     toast({ title: "Song Saved!", description: `"${songTitle}" has been added to your library.` });
   };
   
+  const handleCopyLyrics = () => {
+    if (!lyrics) {
+      toast({ variant: "destructive", title: "Cannot Copy", description: "No lyrics available to copy." });
+      return;
+    }
+    navigator.clipboard.writeText(lyrics).then(() => {
+      toast({ title: "Lyrics Copied!", description: "The lyrics have been copied to your clipboard." });
+    }).catch(err => {
+      console.error("Could not copy lyrics: ", err);
+      toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy lyrics to clipboard." });
+    });
+  };
+
   const handleDownloadLyrics = () => {
     if (!lyrics || !songTitle.trim()) {
       toast({ variant: "destructive", title: "Cannot Download", description: "Missing lyrics or a song title." });
@@ -369,16 +382,21 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                 <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-background/80" />
               </CardContent>
               {(isLoadingMusic || isSongGenerated) && (
-                <CardFooter>
+                <CardFooter className="flex-wrap gap-2">
                   {isLoadingMusic ? (
                     <div className="flex flex-col items-center text-center w-full">
                       <LoadingSpinner size={36} />
                       <p className="mt-2 text-muted-foreground font-body">Composing the perfect tune...</p>
                     </div>
                   ) : (
-                    <Button onClick={handleDownloadLyrics} variant="outline" disabled={!songTitle.trim()}>
-                      <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
-                    </Button>
+                    <>
+                      <Button onClick={handleCopyLyrics} variant="outline" disabled={!lyrics}>
+                        <Copy className="mr-2 h-4 w-4" /> Copy Lyrics
+                      </Button>
+                      <Button onClick={handleDownloadLyrics} variant="outline" disabled={!songTitle.trim()}>
+                        <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
+                      </Button>
+                    </>
                   )}
                 </CardFooter>
               )}
