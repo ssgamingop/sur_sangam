@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Sparkles, Music, Save, FileText, AlertTriangle } from "lucide-react";
+import { Sparkles, Music, Save, FileText } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
@@ -46,7 +46,7 @@ interface SongCreationFormProps {
 export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [musicDescription, setMusicDescription] = useState<string | null>(null);
-  const [musicDataUri, setMusicDataUri] = useState<string | null>(null); // Placeholder
+  const [musicDataUri, setMusicDataUri] = useState<string | null>(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isLoadingMusic, setIsLoadingMusic] = useState(false);
   const [songTitle, setSongTitle] = useState("");
@@ -81,8 +81,8 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       try {
         const musicOutput = await composeMusic({ lyrics: lyricsOutput.lyrics, style: values.style });
         setMusicDescription(musicOutput.description);
-        setMusicDataUri(musicOutput.musicDataUri); // This is a placeholder
-        toast({ title: "Music Composed!", description: "AI has described the music for your song." });
+        setMusicDataUri(musicOutput.musicDataUri);
+        toast({ title: "Music Composed!", description: "Your song is ready to be played." });
       } catch (musicError) {
         console.error("Music composition error:", musicError);
         toast({ variant: "destructive", title: "Music Error", description: "Failed to compose music. Please try again." });
@@ -108,17 +108,12 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       prompt: currentPrompt,
       lyrics,
       style: currentStyle,
-      musicDataUri: musicDataUri || "", // Placeholder
+      musicDataUri: musicDataUri || "",
       musicDescription,
       createdAt: new Date().toISOString(),
     };
     onSongSaved(newSong);
     toast({ title: "Song Saved!", description: `"${songTitle}" has been added to your library.` });
-    // Optionally reset parts of the form or generated content
-    // setLyrics(null);
-    // setMusicDescription(null);
-    // setMusicDataUri(null);
-    // form.reset();
   };
   
   const isSongGenerated = lyrics && musicDescription;
@@ -195,7 +190,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
               <CardTitle className="text-2xl flex items-center gap-2"><FileText className="text-primary" /> Generated Lyrics</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea value={lyrics} readOnly rows={10} className="text-base font-body whitespace-pre-wrap bg-white" />
+              <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-white" />
             </CardContent>
             {isLoadingMusic && (
               <CardFooter className="flex-col items-center text-center">
@@ -214,13 +209,10 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             <CardContent className="space-y-4">
               <p className="text-base font-body">{musicDescription}</p>
               {musicDataUri && (
-                 <div className="p-4 border border-dashed rounded-md bg-muted/50">
-                    <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        <span>AI music generation is currently descriptive. Actual audio playback is not available.</span>
-                    </p>
-                    {/* You could show a disabled audio player or similar placeholder */}
-                    {/* <audio controls src={musicDataUri} className="w-full mt-2" disabled /> */}
+                 <div className="mt-4">
+                    <audio controls src={musicDataUri} className="w-full">
+                        Your browser does not support the audio element.
+                    </audio>
                  </div>
               )}
             </CardContent>
@@ -232,8 +224,8 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2"><Save className="text-primary"/> Save Your Song</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent>
+               <div className="space-y-2">
                 <Label htmlFor="songTitle" className="text-lg">Song Title</Label>
                 <Input 
                   id="songTitle" 
