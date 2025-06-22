@@ -6,7 +6,7 @@ export interface Song {
   prompt: string;
   lyrics: string;
   style: MusicStyle;
-  musicDataUri: string; // This is a placeholder URI as per AI flow
+  musicDataUri?: string; // This is a placeholder URI as per AI flow
   musicDescription: string;
   createdAt: string; // ISO date string
 }

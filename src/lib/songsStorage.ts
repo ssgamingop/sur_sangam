@@ -21,7 +21,9 @@ export const saveSongToLocalStorage = (song: Song): void => {
   }
   try {
     const songs = getSongsFromLocalStorage();
-    const updatedSongs = [song, ...songs.filter(s => s.id !== song.id)]; // Add or update existing
+    // Omit musicDataUri to avoid filling up localStorage
+    const { musicDataUri, ...songToSave } = song;
+    const updatedSongs = [songToSave, ...songs.filter(s => s.id !== song.id)]; // Add or update existing
     localStorage.setItem(SONGS_STORAGE_KEY, JSON.stringify(updatedSongs));
   } catch (error) {
     console.error("Error saving song to localStorage:", error);
