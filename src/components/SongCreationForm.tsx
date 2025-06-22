@@ -381,25 +381,14 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
               <CardContent>
                 <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-background/80" />
               </CardContent>
-              {(isLoadingMusic || isSongGenerated) && (
-                <CardFooter className="flex-wrap gap-2">
-                  {isLoadingMusic ? (
-                    <div className="flex flex-col items-center text-center w-full">
-                      <LoadingSpinner size={36} />
-                      <p className="mt-2 text-muted-foreground font-body">Composing the perfect tune...</p>
-                    </div>
-                  ) : (
-                    <>
-                      <Button onClick={handleCopyLyrics} variant="outline" disabled={!lyrics}>
-                        <Copy className="mr-2 h-4 w-4" /> Copy Lyrics
-                      </Button>
-                      <Button onClick={handleDownloadLyrics} variant="outline" disabled={!songTitle.trim()}>
-                        <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
-                      </Button>
-                    </>
-                  )}
-                </CardFooter>
-              )}
+              <CardFooter className="flex-wrap gap-2">
+                <Button onClick={handleCopyLyrics} variant="outline" disabled={!lyrics}>
+                  <Copy className="mr-2 h-4 w-4" /> Copy Lyrics
+                </Button>
+                <Button onClick={handleDownloadLyrics} variant="outline" disabled={!lyrics || !songTitle.trim()}>
+                  <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
+                </Button>
+              </CardFooter>
             </Card>
 
             <Card className="mt-8">
@@ -425,6 +414,20 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
               </CardContent>
             </Card>
           </>
+        )}
+
+        {isLoadingMusic && (
+          <Card className="mt-8 bg-background/70">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-2"><Music className="text-primary" /> Composing Music...</CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center items-center py-10">
+                <div className="flex flex-col items-center text-center w-full">
+                  <LoadingSpinner size={48} />
+                  <p className="mt-4 text-muted-foreground font-body">Composing the perfect tune...</p>
+                </div>
+            </CardContent>
+          </Card>
         )}
 
         {isSongGenerated && (
