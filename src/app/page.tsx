@@ -51,6 +51,7 @@ export default function HomePage() {
       </main>
       <footer className="py-6 text-center text-sm text-muted-foreground border-t font-body">
         <p>&copy; {new Date().getFullYear()} Sur Sangam. AI-powered Hindi song creation.</p>
+        <p>Made by Somyajeet Singh</p>
         <p>Crafted with <span className="text-primary">&hearts;</span> and AI.</p>
       </footer>
     </div>
