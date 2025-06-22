@@ -359,7 +359,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                 <CardTitle className="text-2xl flex items-center gap-2"><FileText className="text-primary" /> Generated Lyrics</CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-white" />
+                <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-background/80" />
               </CardContent>
               {(isLoadingMusic || isSongGenerated) && (
                 <CardFooter>

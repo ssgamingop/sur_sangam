@@ -47,7 +47,7 @@ export function SavedSongsList({ songs, onDeleteSong }: SavedSongsListProps) {
                   <div className="space-y-4">
                     <div>
                       <h4 className="text-lg font-headline text-primary flex items-center gap-2"><FileText size={20} /> Lyrics</h4>
-                      <ScrollArea className="h-40 mt-1 rounded-md border p-3 bg-white">
+                      <ScrollArea className="h-40 mt-1 rounded-md border p-3 bg-background/80">
                         <pre className="text-sm font-body whitespace-pre-wrap">{song.lyrics}</pre>
                       </ScrollArea>
                     </div>
