@@ -48,6 +48,13 @@ interface SongCreationFormProps {
   onSongSaved: (song: Song) => void;
 }
 
+function getAiErrorDescription(error: unknown): string {
+  if (error instanceof Error && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
+      return 'You have exceeded the daily free API limit. Please try again tomorrow.';
+  }
+  return 'An unexpected error occurred. Please try again later.';
+}
+
 export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [musicDescription, setMusicDescription] = useState<string | null>(null);
@@ -98,13 +105,13 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
         toast({ title: "Music Composed!", description: "Your song is ready to be played." });
       } catch (musicError) {
         console.error("Music composition error:", musicError);
-        toast({ variant: "destructive", title: "Music Error", description: "Failed to compose music. Please try again." });
+        toast({ variant: "destructive", title: "Music Error", description: getAiErrorDescription(musicError) });
       } finally {
         setIsLoadingMusic(false);
       }
     } catch (lyricsError) {
       console.error("Lyrics generation error:", lyricsError);
-      toast({ variant: "destructive", title: "Lyrics Error", description: "Failed to generate lyrics. Please try again." });
+      toast({ variant: "destructive", title: "Lyrics Error", description: getAiErrorDescription(lyricsError) });
     } finally {
       setIsLoadingLyrics(false);
     }
@@ -187,13 +194,13 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
         toast({ title: "Music Re-Composed!", description: "Your song has been updated with the new lyrics." });
       } catch (musicError) {
         console.error("Music re-composition error:", musicError);
-        toast({ variant: "destructive", title: "Music Error", description: "Failed to compose music for the new lyrics." });
+        toast({ variant: "destructive", title: "Music Error", description: getAiErrorDescription(musicError) });
       } finally {
         setIsLoadingMusic(false);
       }
     } catch (error) {
       console.error("Lyric improvement error:", error);
-      toast({ variant: "destructive", title: "Improvement Error", description: "Failed to improve lyrics. Please try again." });
+      toast({ variant: "destructive", title: "Improvement Error", description: getAiErrorDescription(error) });
     } finally {
       setIsImprovingLyrics(false);
     }
@@ -234,7 +241,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       toast({
         variant: 'destructive',
         title: 'Preview Error',
-        description: 'Failed to generate voice sample. Check console for details.',
+        description: getAiErrorDescription(error),
       });
     } finally {
       setIsPreviewingVoice(false);
