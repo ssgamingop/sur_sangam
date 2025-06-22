@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -232,8 +233,8 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
               <CardTitle className="text-2xl flex items-center gap-2"><Save className="text-primary"/> Save Your Song</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormItem>
-                <FormLabel htmlFor="songTitle" className="text-lg">Song Title</FormLabel>
+              <div className="space-y-2">
+                <Label htmlFor="songTitle" className="text-lg">Song Title</Label>
                 <Input 
                   id="songTitle" 
                   value={songTitle} 
@@ -241,7 +242,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                   placeholder="Enter a title for your song"
                   className="text-base"
                 />
-              </FormItem>
+              </div>
             </CardContent>
             <CardFooter>
               <Button onClick={handleSaveSong} size="lg" className="w-full text-lg" disabled={!songTitle.trim()}>
