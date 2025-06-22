@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Sparkles, Music, Save, FileText } from "lucide-react";
+import { Sparkles, Music, Save, FileText, Download } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
@@ -116,6 +116,37 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     toast({ title: "Song Saved!", description: `"${songTitle}" has been added to your library.` });
   };
   
+  const handleDownloadLyrics = () => {
+    if (!lyrics || !songTitle.trim()) {
+      toast({ variant: "destructive", title: "Cannot Download", description: "Missing lyrics or a song title." });
+      return;
+    }
+    const blob = new Blob([lyrics], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${songTitle.trim().replace(/ /g, '_')}-lyrics.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Lyrics Download Started", description: "Check your downloads folder." });
+  };
+
+  const handleDownloadMusic = () => {
+    if (!musicDataUri || !songTitle.trim()) {
+      toast({ variant: "destructive", title: "Cannot Download", description: "Missing music or a song title." });
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = musicDataUri;
+    link.download = `${songTitle.trim().replace(/ /g, '_')}.wav`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Music Download Started", description: "Check your downloads folder." });
+  };
+
   const isSongGenerated = lyrics && musicDescription;
 
   return (
@@ -192,16 +223,24 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             <CardContent>
               <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-white" />
             </CardContent>
-            {isLoadingMusic && (
-              <CardFooter className="flex-col items-center text-center">
-                <LoadingSpinner size={36} />
-                <p className="mt-2 text-muted-foreground font-body">Composing the perfect tune...</p>
+            {(isLoadingMusic || isSongGenerated) && (
+              <CardFooter>
+                {isLoadingMusic ? (
+                  <div className="flex flex-col items-center text-center w-full">
+                    <LoadingSpinner size={36} />
+                    <p className="mt-2 text-muted-foreground font-body">Composing the perfect tune...</p>
+                  </div>
+                ) : (
+                  <Button onClick={handleDownloadLyrics} variant="outline" disabled={!songTitle.trim()}>
+                    <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
+                  </Button>
+                )}
               </CardFooter>
             )}
           </Card>
         )}
 
-        {musicDescription && (
+        {isSongGenerated && (
            <Card className="mt-8 bg-background/70">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2"><Music className="text-primary" /> Music Composition</CardTitle>
@@ -216,6 +255,13 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                  </div>
               )}
             </CardContent>
+            {musicDataUri && (
+              <CardFooter>
+                <Button onClick={handleDownloadMusic} variant="outline" disabled={!songTitle.trim()}>
+                  <Download className="mr-2 h-4 w-4" /> Download Music (.wav)
+                </Button>
+              </CardFooter>
+            )}
           </Card>
         )}
         
@@ -225,7 +271,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
               <CardTitle className="text-2xl flex items-center gap-2"><Save className="text-primary"/> Save Your Song</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="songTitle" className="text-lg">Song Title</Label>
                 <Input 
                   id="songTitle" 
