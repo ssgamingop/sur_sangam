@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { generateHindiLyrics } from "@/ai/flows/generate-hindi-lyrics";
 import { composeMusic } from "@/ai/flows/compose-music-from-lyrics";
 import { suggestLyricImprovements } from "@/ai/flows/suggest-lyric-improvements";
+import { generateVoiceSample } from "@/ai/flows/generate-voice-sample";
 import type { MusicStyle, Song, Voice } from "@/types/song";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +32,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Sparkles, Music, Save, FileText, Download, Lightbulb } from "lucide-react";
+import { Sparkles, Music, Save, FileText, Download, Lightbulb, Play } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
@@ -54,6 +55,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isLoadingMusic, setIsLoadingMusic] = useState(false);
   const [isImprovingLyrics, setIsImprovingLyrics] = useState(false);
+  const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
   const [improvementRequest, setImprovementRequest] = useState("");
   const [songTitle, setSongTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
@@ -195,6 +197,34 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       setIsImprovingLyrics(false);
     }
   };
+  
+  const handlePreviewVoice = async (voice: Voice) => {
+    if (!voice) {
+      toast({ variant: "destructive", title: "No Voice Selected", description: "Please select a voice to preview." });
+      return;
+    }
+    setIsPreviewingVoice(true);
+    try {
+      const result = await generateVoiceSample({
+        voice: voice,
+        text: 'नमस्ते, मैं आपकी एआई गायिका हूँ।', // "Hello, I am your AI singer."
+      });
+      if (result.audioDataUri) {
+        const audio = new Audio(result.audioDataUri);
+        audio.play();
+        toast({ title: `Playing sample for ${voice}` });
+      }
+    } catch (error) {
+      console.error('Voice preview error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Preview Error',
+        description: 'Failed to generate voice sample.',
+      });
+    } finally {
+      setIsPreviewingVoice(false);
+    }
+  };
 
 
   const isSongGenerated = lyrics && musicDescription;
@@ -259,20 +289,32 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-lg">Singer's Voice</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="text-base">
-                          <SelectValue placeholder="Select a voice" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {musicVoices.map(voice => (
-                          <SelectItem key={voice} value={voice} className="text-base">
-                            {voice}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                     <div className="flex items-center gap-2">
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger className="text-base">
+                            <SelectValue placeholder="Select a voice" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {musicVoices.map(voice => (
+                            <SelectItem key={voice} value={voice} className="text-base">
+                                {voice}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handlePreviewVoice(field.value as Voice)}
+                            disabled={isPreviewingVoice || isBusy}
+                            aria-label="Preview voice"
+                        >
+                            {isPreviewingVoice ? <LoadingSpinner size={16} /> : <Play size={16} />}
+                        </Button>
+                    </div>
                     <FormDescription>
                       Choose the voice for your singer.
                     </FormDescription>
