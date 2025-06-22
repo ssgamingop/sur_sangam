@@ -1,4 +1,3 @@
-// src/ai/flows/suggest-lyric-improvements.ts
 'use server';
 
 /**
@@ -45,9 +44,9 @@ const suggestLyricImprovementsPrompt = ai.definePrompt({
         Original Lyrics: {{{lyrics}}}
         Improvement Request: {{{improvementRequest}}}
 
-        Please suggest improved lyrics that maintain the original theme and sentiment while addressing the specific improvement request.  The improved lyrics should still be in Hindi.
+        Please suggest improved lyrics that maintain the original theme and sentiment while addressing the specific improvement request. The improved lyrics should still be in Hindi. Return only the lyrics, with no extra formatting or commentary.
 
-        Improved Lyrics:`, // Prompt that guides the LLM.
+        Improved Lyrics:`,
 });
 
 // Define the Genkit flow for suggesting lyric improvements

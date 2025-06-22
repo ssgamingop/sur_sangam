@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useState, useEffect } from "react";
 import { generateHindiLyrics } from "@/ai/flows/generate-hindi-lyrics";
 import { composeMusic } from "@/ai/flows/compose-music-from-lyrics";
+import { suggestLyricImprovements } from "@/ai/flows/suggest-lyric-improvements";
 import type { MusicStyle, Song } from "@/types/song";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +31,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Sparkles, Music, Save, FileText, Download } from "lucide-react";
+import { Sparkles, Music, Save, FileText, Download, Lightbulb } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
@@ -49,6 +50,8 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [musicDataUri, setMusicDataUri] = useState<string | null>(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isLoadingMusic, setIsLoadingMusic] = useState(false);
+  const [isImprovingLyrics, setIsImprovingLyrics] = useState(false);
+  const [improvementRequest, setImprovementRequest] = useState("");
   const [songTitle, setSongTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentStyle, setCurrentStyle] = useState<MusicStyle>('Bollywood');
@@ -70,6 +73,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     setSongTitle(values.prompt); // Default title
     setCurrentPrompt(values.prompt);
     setCurrentStyle(values.style);
+    setImprovementRequest("");
 
     setIsLoadingLyrics(true);
     try {
@@ -147,7 +151,47 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     toast({ title: "Music Download Started", description: "Check your downloads folder." });
   };
 
+  const handleSuggestImprovements = async () => {
+    if (!lyrics || !improvementRequest.trim()) {
+      toast({ variant: "destructive", title: "Cannot Improve", description: "Lyrics or improvement request is missing." });
+      return;
+    }
+    setIsImprovingLyrics(true);
+    // Clear old music
+    setMusicDescription(null);
+    setMusicDataUri(null);
+    try {
+      const result = await suggestLyricImprovements({
+        lyrics,
+        improvementRequest,
+      });
+      setLyrics(result.improvedLyrics);
+      toast({ title: "Lyrics Improved!", description: "The AI has revised your lyrics. Re-composing music..." });
+
+      // Re-compose music with new lyrics
+      setIsLoadingMusic(true);
+      try {
+        const musicOutput = await composeMusic({ lyrics: result.improvedLyrics, style: currentStyle });
+        setMusicDescription(musicOutput.description);
+        setMusicDataUri(musicOutput.musicDataUri);
+        toast({ title: "Music Re-Composed!", description: "Your song has been updated with the new lyrics." });
+      } catch (musicError) {
+        console.error("Music re-composition error:", musicError);
+        toast({ variant: "destructive", title: "Music Error", description: "Failed to compose music for the new lyrics." });
+      } finally {
+        setIsLoadingMusic(false);
+      }
+    } catch (error) {
+      console.error("Lyric improvement error:", error);
+      toast({ variant: "destructive", title: "Improvement Error", description: "Failed to improve lyrics. Please try again." });
+    } finally {
+      setIsImprovingLyrics(false);
+    }
+  };
+
+
   const isSongGenerated = lyrics && musicDescription;
+  const isBusy = isLoadingLyrics || isLoadingMusic || isImprovingLyrics;
 
   return (
     <Card className="w-full shadow-xl">
@@ -201,9 +245,9 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" size="lg" className="w-full text-lg" disabled={isLoadingLyrics || isLoadingMusic}>
-              {(isLoadingLyrics || isLoadingMusic) && <LoadingSpinner size={20} className="mr-2" />}
-              {isLoadingLyrics ? "Generating Lyrics..." : isLoadingMusic ? "Composing Music..." : "Create Song"}
+            <Button type="submit" size="lg" className="w-full text-lg" disabled={isBusy}>
+              {isBusy && <LoadingSpinner size={20} className="mr-2" />}
+              {isLoadingLyrics ? "Generating Lyrics..." : isLoadingMusic ? "Composing Music..." : isImprovingLyrics ? "Improving Lyrics..." : "Create Song"}
             </Button>
           </form>
         </Form>
@@ -216,28 +260,53 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
         )}
 
         {lyrics && (
-          <Card className="mt-8 bg-background/70">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2"><FileText className="text-primary" /> Generated Lyrics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-white" />
-            </CardContent>
-            {(isLoadingMusic || isSongGenerated) && (
-              <CardFooter>
-                {isLoadingMusic ? (
-                  <div className="flex flex-col items-center text-center w-full">
-                    <LoadingSpinner size={36} />
-                    <p className="mt-2 text-muted-foreground font-body">Composing the perfect tune...</p>
-                  </div>
-                ) : (
-                  <Button onClick={handleDownloadLyrics} variant="outline" disabled={!songTitle.trim()}>
-                    <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
-                  </Button>
-                )}
-              </CardFooter>
-            )}
-          </Card>
+          <>
+            <Card className="mt-8 bg-background/70">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-2"><FileText className="text-primary" /> Generated Lyrics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-white" />
+              </CardContent>
+              {(isLoadingMusic || isSongGenerated) && (
+                <CardFooter>
+                  {isLoadingMusic ? (
+                    <div className="flex flex-col items-center text-center w-full">
+                      <LoadingSpinner size={36} />
+                      <p className="mt-2 text-muted-foreground font-body">Composing the perfect tune...</p>
+                    </div>
+                  ) : (
+                    <Button onClick={handleDownloadLyrics} variant="outline" disabled={!songTitle.trim()}>
+                      <Download className="mr-2 h-4 w-4" /> Download Lyrics (.txt)
+                    </Button>
+                  )}
+                </CardFooter>
+              )}
+            </Card>
+
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-2"><Lightbulb className="text-primary" /> Improve Your Lyrics</CardTitle>
+                <CardDescription>Not quite right? Give the AI some feedback to revise the lyrics.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                 <div className="space-y-2">
+                  <Label htmlFor="improvementRequest">Your Improvement Request</Label>
+                  <Textarea 
+                    id="improvementRequest"
+                    placeholder="e.g., 'Make the chorus rhyme better' or 'Add a verse about hope'"
+                    value={improvementRequest}
+                    onChange={(e) => setImprovementRequest(e.target.value)}
+                    className="text-base"
+                  />
+                 </div>
+                <Button onClick={handleSuggestImprovements} disabled={isBusy || !improvementRequest.trim()} className="w-full">
+                  {isImprovingLyrics && <LoadingSpinner size={20} className="mr-2" />}
+                  Suggest & Re-Compose
+                </Button>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {isSongGenerated && (
@@ -272,7 +341,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="songTitle" className="text-lg">Song Title</Label>
+                <Label htmlFor="songTitle">Song Title</Label>
                 <Input 
                   id="songTitle" 
                   value={songTitle} 
