@@ -4,8 +4,7 @@ import type { Song } from '@/types/song';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, FileText, Music, CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { Trash2, FileText, Music, User } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { format, parseISO } from 'date-fns';
 
@@ -37,7 +36,7 @@ export function SavedSongsList({ songs, onDeleteSong }: SavedSongsListProps) {
                   <div className="text-left">
                     <CardTitle className="text-2xl font-headline text-primary">{song.title}</CardTitle>
                     <CardDescription className="text-sm font-body text-muted-foreground">
-                      Style: {song.style} - Created: {format(parseISO(song.createdAt), "MMM d, yyyy")}
+                      Style: {song.style} &bull; Voice: {song.voice} &bull; Created: {format(parseISO(song.createdAt), "MMM d, yyyy")}
                     </CardDescription>
                   </div>
                   {/* Chevron is part of AccordionTrigger already */}

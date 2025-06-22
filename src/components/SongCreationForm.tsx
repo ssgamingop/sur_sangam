@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { generateHindiLyrics } from "@/ai/flows/generate-hindi-lyrics";
 import { composeMusic } from "@/ai/flows/compose-music-from-lyrics";
 import { suggestLyricImprovements } from "@/ai/flows/suggest-lyric-improvements";
-import type { MusicStyle, Song } from "@/types/song";
+import type { MusicStyle, Song, Voice } from "@/types/song";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -36,9 +36,12 @@ import { Sparkles, Music, Save, FileText, Download, Lightbulb } from "lucide-rea
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
   style: z.enum(['Bollywood', 'Classical', 'Devotional']),
+  voice: z.enum(['Vega', 'Sirius', 'Spica']),
 });
 
 const musicStyles: MusicStyle[] = ['Bollywood', 'Classical', 'Devotional'];
+const musicVoices: Voice[] = ['Vega', 'Sirius', 'Spica'];
+
 
 interface SongCreationFormProps {
   onSongSaved: (song: Song) => void;
@@ -55,6 +58,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [songTitle, setSongTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentStyle, setCurrentStyle] = useState<MusicStyle>('Bollywood');
+  const [currentVoice, setCurrentVoice] = useState<Voice>('Vega');
 
   const { toast } = useToast();
 
@@ -63,6 +67,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     defaultValues: {
       prompt: "",
       style: 'Bollywood',
+      voice: 'Vega',
     },
   });
 
@@ -73,6 +78,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     setSongTitle(values.prompt); // Default title
     setCurrentPrompt(values.prompt);
     setCurrentStyle(values.style);
+    setCurrentVoice(values.voice);
     setImprovementRequest("");
 
     setIsLoadingLyrics(true);
@@ -83,7 +89,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
 
       setIsLoadingMusic(true);
       try {
-        const musicOutput = await composeMusic({ lyrics: lyricsOutput.lyrics, style: values.style });
+        const musicOutput = await composeMusic({ lyrics: lyricsOutput.lyrics, style: values.style, voice: values.voice });
         setMusicDescription(musicOutput.description);
         setMusicDataUri(musicOutput.musicDataUri);
         toast({ title: "Music Composed!", description: "Your song is ready to be played." });
@@ -112,6 +118,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       prompt: currentPrompt,
       lyrics,
       style: currentStyle,
+      voice: currentVoice,
       musicDataUri: musicDataUri || "",
       musicDescription,
       createdAt: new Date().toISOString(),
@@ -171,7 +178,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       // Re-compose music with new lyrics
       setIsLoadingMusic(true);
       try {
-        const musicOutput = await composeMusic({ lyrics: result.improvedLyrics, style: currentStyle });
+        const musicOutput = await composeMusic({ lyrics: result.improvedLyrics, style: currentStyle, voice: currentVoice });
         setMusicDescription(musicOutput.description);
         setMusicDataUri(musicOutput.musicDataUri);
         toast({ title: "Music Re-Composed!", description: "Your song has been updated with the new lyrics." });
@@ -218,33 +225,62 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="style"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-lg">Musical Style</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="text-base">
-                        <SelectValue placeholder="Select a musical style" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {musicStyles.map(style => (
-                        <SelectItem key={style} value={style} className="text-base">
-                          {style}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Choose the genre for your song.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="style"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-lg">Musical Style</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="text-base">
+                          <SelectValue placeholder="Select a musical style" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {musicStyles.map(style => (
+                          <SelectItem key={style} value={style} className="text-base">
+                            {style}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Choose the genre for your song.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="voice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-lg">Singer's Voice</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="text-base">
+                          <SelectValue placeholder="Select a voice" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {musicVoices.map(voice => (
+                          <SelectItem key={voice} value={voice} className="text-base">
+                            {voice}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Choose the voice for your singer.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <Button type="submit" size="lg" className="w-full text-lg" disabled={isBusy}>
               {isBusy && <LoadingSpinner size={20} className="mr-2" />}
               {isLoadingLyrics ? "Generating Lyrics..." : isLoadingMusic ? "Composing Music..." : isImprovingLyrics ? "Improving Lyrics..." : "Create Song"}

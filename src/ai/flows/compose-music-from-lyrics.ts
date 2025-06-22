@@ -19,6 +19,9 @@ const ComposeMusicInputSchema = z.object({
   style: z
     .enum(['Bollywood', 'Classical', 'Devotional'])
     .describe('The musical style to compose in.'),
+  voice: z
+    .enum(['Vega', 'Sirius', 'Spica'])
+    .describe('The voice for the text-to-speech model.'),
 });
 export type ComposeMusicInput = z.infer<typeof ComposeMusicInputSchema>;
 
@@ -97,7 +100,7 @@ const composeMusicFlow = ai.defineFlow(
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            prebuiltVoiceConfig: { voiceName: input.voice },
           },
         },
       },
