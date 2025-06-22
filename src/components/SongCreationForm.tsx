@@ -61,6 +61,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentStyle, setCurrentStyle] = useState<MusicStyle>('Bollywood');
   const [currentVoice, setCurrentVoice] = useState<Voice>('Vega');
+  const [voiceSampleCache, setVoiceSampleCache] = useState<Partial<Record<Voice, string>>>({});
 
   const { toast } = useToast();
 
@@ -203,6 +204,14 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       toast({ variant: "destructive", title: "No Voice Selected", description: "Please select a voice to preview." });
       return;
     }
+    // Check cache first
+    if (voiceSampleCache[voice]) {
+      const audio = new Audio(voiceSampleCache[voice]);
+      audio.play();
+      toast({ title: `Playing sample for ${voice} (from cache)` });
+      return;
+    }
+
     setIsPreviewingVoice(true);
     try {
       const result = await generateVoiceSample({
@@ -210,6 +219,12 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
         text: 'नमस्ते, मैं आपकी एआई गायिका हूँ।', // "Hello, I am your AI singer."
       });
       if (result.audioDataUri) {
+        // Store in cache
+        setVoiceSampleCache(prevCache => ({
+          ...prevCache,
+          [voice]: result.audioDataUri,
+        }));
+        
         const audio = new Audio(result.audioDataUri);
         audio.play();
         toast({ title: `Playing sample for ${voice}` });
@@ -219,7 +234,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       toast({
         variant: 'destructive',
         title: 'Preview Error',
-        description: 'Failed to generate voice sample.',
+        description: 'Failed to generate voice sample. Check console for details.',
       });
     } finally {
       setIsPreviewingVoice(false);
