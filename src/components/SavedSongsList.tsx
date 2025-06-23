@@ -4,22 +4,33 @@ import type { Song } from '@/types/song';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, FileText, Music, User } from 'lucide-react';
+import { Trash2, FileText, Music, Search } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { format, parseISO } from 'date-fns';
 
 interface SavedSongsListProps {
   songs: Song[];
+  totalSongs: number;
   onDeleteSong: (songId: string) => void;
 }
 
-export function SavedSongsList({ songs, onDeleteSong }: SavedSongsListProps) {
-  if (songs.length === 0) {
+export function SavedSongsList({ songs, totalSongs, onDeleteSong }: SavedSongsListProps) {
+  if (totalSongs === 0) {
     return (
-      <div className="text-center py-10">
+      <div className="text-center py-10 border rounded-lg bg-card/50">
         <Music className="mx-auto h-12 w-12 text-muted-foreground" />
         <h3 className="mt-2 text-xl font-headline text-muted-foreground">No Saved Songs Yet</h3>
         <p className="mt-1 text-sm text-muted-foreground font-body">Create some music and it will appear here!</p>
+      </div>
+    );
+  }
+
+  if (songs.length === 0) {
+    return (
+       <div className="text-center py-10 border rounded-lg bg-card/50">
+        <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-2 text-xl font-headline text-muted-foreground">No Songs Found</h3>
+        <p className="mt-1 text-sm text-muted-foreground font-body">Your search returned no results. Try another keyword.</p>
       </div>
     );
   }
@@ -39,7 +50,6 @@ export function SavedSongsList({ songs, onDeleteSong }: SavedSongsListProps) {
                       Style: {song.style} &bull; Voice: {song.voice} &bull; Created: {format(parseISO(song.createdAt), "MMM d, yyyy")}
                     </CardDescription>
                   </div>
-                  {/* Chevron is part of AccordionTrigger already */}
                 </div>
               </AccordionTrigger>
               <AccordionContent>
