@@ -4,9 +4,11 @@ import type { Song } from '@/types/song';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, FileText, Music, Search } from 'lucide-react';
+import { Trash2, FileText, Music, Search, Download, Copy } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { format, parseISO } from 'date-fns';
+import { useToast } from "@/hooks/use-toast";
+
 
 interface SavedSongsListProps {
   songs: Song[];
@@ -15,6 +17,39 @@ interface SavedSongsListProps {
 }
 
 export function SavedSongsList({ songs, totalSongs, onDeleteSong }: SavedSongsListProps) {
+  const { toast } = useToast();
+
+  const handleCopyLyrics = (song: Song) => {
+    if (!song.lyrics) {
+      toast({ variant: "destructive", title: "Cannot Copy", description: "No lyrics available to copy." });
+      return;
+    }
+    navigator.clipboard.writeText(song.lyrics).then(() => {
+      toast({ title: "Lyrics Copied!", description: `Lyrics for "${song.title}" have been copied.` });
+    }).catch(err => {
+      console.error("Could not copy lyrics: ", err);
+      toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy lyrics to clipboard." });
+    });
+  };
+
+  const handleDownloadLyrics = (song: Song) => {
+    if (!song.lyrics || !song.title.trim()) {
+      toast({ variant: "destructive", title: "Cannot Download", description: "Missing lyrics or a song title." });
+      return;
+    }
+    const blob = new Blob([song.lyrics], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${song.title.trim().replace(/ /g, '_')}-lyrics.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Lyrics Download Started", description: "Check your downloads folder." });
+  };
+
+
   if (totalSongs === 0) {
     return (
       <div className="text-center py-10 border rounded-lg bg-card/50">
@@ -56,7 +91,17 @@ export function SavedSongsList({ songs, totalSongs, onDeleteSong }: SavedSongsLi
                 <CardContent className="pt-0 pb-6 px-6">
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-lg font-headline text-primary flex items-center gap-2"><FileText size={20} /> Lyrics</h4>
+                      <div className="flex justify-between items-center mb-2">
+                         <h4 className="text-lg font-headline text-primary flex items-center gap-2"><FileText size={20} /> Lyrics</h4>
+                         <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleCopyLyrics(song); }}>
+                              <Copy size={16} className="mr-2" /> Copy
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownloadLyrics(song); }}>
+                              <Download size={16} className="mr-2" /> Download
+                            </Button>
+                         </div>
+                      </div>
                       <ScrollArea className="h-40 mt-1 rounded-md border p-3 bg-background/80">
                         <pre className="text-sm font-body whitespace-pre-wrap">{song.lyrics}</pre>
                       </ScrollArea>
