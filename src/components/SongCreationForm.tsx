@@ -36,11 +36,11 @@ import { Sparkles, Music, Save, FileText, Download, Lightbulb, Play, Copy } from
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
-  style: z.enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop']),
+  style: z.enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop', 'Energetic', 'Aggressive Rap', 'Sad']),
   voice: z.enum(['Vega', 'Sirius', 'Spica']),
 });
 
-const musicStyles: MusicStyle[] = ['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop'];
+const musicStyles: MusicStyle[] = ['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop', 'Energetic', 'Aggressive Rap', 'Sad'];
 const musicVoices: Voice[] = ['Vega', 'Sirius', 'Spica'];
 
 

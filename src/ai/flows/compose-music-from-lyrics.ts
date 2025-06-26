@@ -17,7 +17,7 @@ import wav from 'wav';
 const ComposeMusicInputSchema = z.object({
   lyrics: z.string().describe('The Hindi lyrics to compose music for.'),
   style: z
-    .enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop'])
+    .enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop', 'Energetic', 'Aggressive Rap', 'Sad'])
     .describe('The musical style to compose in.'),
   voice: z
     .enum(['Vega', 'Sirius', 'Spica'])
