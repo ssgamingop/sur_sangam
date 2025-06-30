@@ -82,7 +82,7 @@ export function SavedSongsList({ songs, totalSongs, onDeleteSong }: SavedSongsLi
                   <div className="text-left">
                     <CardTitle className="text-2xl font-headline text-primary">{song.title}</CardTitle>
                     <CardDescription className="text-sm font-body text-muted-foreground">
-                      Style: {song.style} &bull; Voice: {song.voice} &bull; Created: {format(parseISO(song.createdAt), "MMM d, yyyy")}
+                      Style: {song.style} &bull; Created: {format(parseISO(song.createdAt), "MMM d, yyyy")}
                     </CardDescription>
                   </div>
                 </div>

@@ -1,13 +1,9 @@
-export type MusicStyle = 'Bollywood' | 'Classical' | 'Devotional' | 'Folk' | 'Ghazal' | 'Sufi' | 'Pop' | 'Energetic' | 'Aggressive Rap' | 'Sad';
-export type Voice = 'Vega' | 'Sirius' | 'Spica';
-
 export interface Song {
   id: string;
   title: string;
   prompt: string;
   lyrics: string;
-  style: MusicStyle;
-  voice: Voice;
+  style: string;
   musicDataUri?: string; // This is a placeholder URI as per AI flow
   musicDescription: string;
   createdAt: string; // ISO date string

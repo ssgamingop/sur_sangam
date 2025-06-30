@@ -1,9 +1,8 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for composing music from Hindi lyrics.
+ * @fileOverview This file defines a Genkit flow for composing music from Hindi lyrics using the Suno API.
  *
- * The flow takes Hindi lyrics and a music style as input and generates music in that style.
  * It exports:
  * - `ComposeMusicInput`: The input type for the composeMusic function.
  * - `ComposeMusicOutput`: The output type for the composeMusic function.
@@ -12,16 +11,14 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+
+// Helper function to cause a delay
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const ComposeMusicInputSchema = z.object({
   lyrics: z.string().describe('The Hindi lyrics to compose music for.'),
-  style: z
-    .enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop', 'Energetic', 'Aggressive Rap', 'Sad'])
-    .describe('The musical style to compose in.'),
-  voice: z
-    .enum(['Vega', 'Sirius', 'Spica'])
-    .describe('The voice for the text-to-speech model.'),
+  style: z.string().describe('The musical style tags for Suno, e.g., "Bollywood, pop, male singer".'),
+  title: z.string().describe('The title of the song.'),
 });
 export type ComposeMusicInput = z.infer<typeof ComposeMusicInputSchema>;
 
@@ -39,47 +36,6 @@ export async function composeMusic(input: ComposeMusicInput): Promise<ComposeMus
   return composeMusicFlow(input);
 }
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
-
-const descriptionPrompt = ai.definePrompt({
-  name: 'composeMusicDescriptionPrompt',
-  input: { schema: ComposeMusicInputSchema },
-  output: { schema: z.object({ description: z.string().describe('A description of the composed music.') }) },
-  prompt: `You are an AI music composer specializing in Hindi music.
-
-You will receive Hindi lyrics and a desired musical style. You will then generate a description of music that complements the lyrics in the specified style.
-
-Lyrics: {{{lyrics}}}
-Style: {{{style}}}
-
-Return only a description of the musical composition.`,
-});
-
 const composeMusicFlow = ai.defineFlow(
   {
     name: 'composeMusicFlow',
@@ -87,42 +43,91 @@ const composeMusicFlow = ai.defineFlow(
     outputSchema: ComposeMusicOutputSchema,
   },
   async (input) => {
-    // 1. Generate the music description.
-    const { output: descriptionOutput } = await descriptionPrompt(input);
-    if (!descriptionOutput) {
-      throw new Error('Failed to generate music description.');
+    const apiKey = process.env.SUNO_API_KEY;
+    if (!apiKey) {
+      throw new Error('SUNO_API_KEY is not set in the environment variables.');
     }
-    
-    // 2. Generate the audio from lyrics using the Text-to-Speech model.
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: input.voice },
-          },
-        },
+
+    // Step 1: Initiate song generation
+    const generateResponse = await fetch('https://studio-api.suno.ai/api/generate/v2/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
-      prompt: input.lyrics,
+      body: JSON.stringify({
+        "gpt_description_prompt": input.lyrics,
+        "prompt": "", // custom mode takes lyrics from gpt_description_prompt
+        "make_instrumental": false,
+        "mv": "chirp-v3-0",
+        "title": input.title,
+        "tags": input.style,
+      }),
     });
 
-    if (!media) {
-      throw new Error('No audio media was returned from the TTS model.');
+    if (!generateResponse.ok) {
+      const errorText = await generateResponse.text();
+      throw new Error(`Suno API generation failed: ${generateResponse.status} ${errorText}`);
     }
 
-    // 3. Convert the raw PCM audio data to a WAV file format.
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const wavBase64 = await toWav(audioBuffer);
-    const musicDataUri = `data:audio/wav;base64,${wavBase64}`;
+    const generateData = await generateResponse.json();
+    const clipIds = generateData.clips.map((clip: any) => clip.id);
 
-    // 4. Return both the description and the audio data URI.
+    // Step 2: Poll for completion
+    let attempts = 0;
+    const maxAttempts = 24; // 24 attempts * 5 seconds = 120 seconds max wait time
+    let audioUrl: string | null = null;
+
+    while (attempts < maxAttempts) {
+      await sleep(5000); // Wait 5 seconds between polls
+      attempts++;
+
+      const feedResponse = await fetch(`https://studio-api.suno.ai/api/feed/?ids=${clipIds.join(',')}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!feedResponse.ok) {
+        // Continue polling even if one check fails, but log it
+        console.warn(`Suno API polling failed: ${feedResponse.status}`);
+        continue;
+      }
+
+      const feedData = await feedResponse.json();
+      
+      // Find the first completed clip
+      const completedClip = feedData.find((clip: any) => clip.status === 'complete');
+
+      if (completedClip) {
+        audioUrl = completedClip.audio_url;
+        break; // Exit loop once a song is ready
+      }
+
+      // Check for errors
+      const erroredClip = feedData.find((clip: any) => clip.status === 'error');
+      if (erroredClip) {
+          throw new Error(`Suno song generation failed for clip ${erroredClip.id}.`);
+      }
+    }
+
+    if (!audioUrl) {
+      throw new Error('Suno song generation timed out after 2 minutes.');
+    }
+
+    // Step 3: Download the audio and convert to data URI
+    const audioResponse = await fetch(audioUrl);
+    if (!audioResponse.ok) {
+        throw new Error(`Failed to download audio from Suno: ${audioResponse.status}`);
+    }
+
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+    const musicDataUri = `data:audio/mpeg;base64,${audioBase64}`;
+
     return {
-      description: descriptionOutput.description,
       musicDataUri: musicDataUri,
+      description: 'Music composed with the Suno API.',
     };
   }
 );

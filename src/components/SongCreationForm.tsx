@@ -1,14 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { generateHindiLyrics } from "@/ai/flows/generate-hindi-lyrics";
 import { composeMusic } from "@/ai/flows/compose-music-from-lyrics";
 import { suggestLyricImprovements } from "@/ai/flows/suggest-lyric-improvements";
-import { generateVoiceSample } from "@/ai/flows/generate-voice-sample";
-import type { MusicStyle, Song, Voice } from "@/types/song";
+import type { Song } from "@/types/song";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -22,35 +21,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Sparkles, Music, Save, FileText, Download, Lightbulb, Play, Copy } from "lucide-react";
+import { Sparkles, Music, Save, FileText, Download, Lightbulb, Copy } from "lucide-react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
-  style: z.enum(['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop', 'Energetic', 'Aggressive Rap', 'Sad']),
-  voice: z.enum(['Vega', 'Sirius', 'Spica']),
+  style: z.string().min(3, { message: "Style must be at least 3 characters." }),
 });
-
-const musicStyles: MusicStyle[] = ['Bollywood', 'Classical', 'Devotional', 'Folk', 'Ghazal', 'Sufi', 'Pop', 'Energetic', 'Aggressive Rap', 'Sad'];
-const musicVoices: Voice[] = ['Vega', 'Sirius', 'Spica'];
-
 
 interface SongCreationFormProps {
   onSongSaved: (song: Song) => void;
 }
 
 function getAiErrorDescription(error: unknown): string {
-  if (error instanceof Error && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
+  if (error instanceof Error) {
+    if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
       return 'You have exceeded the daily free API limit. Please try again tomorrow.';
+    }
+    if (error.message.includes('SUNO_API_KEY')) {
+        return 'The Suno API key is missing. Please ask the developer to configure it.';
+    }
   }
   return 'An unexpected error occurred. Please try again later.';
 }
@@ -62,22 +54,18 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isLoadingMusic, setIsLoadingMusic] = useState(false);
   const [isImprovingLyrics, setIsImprovingLyrics] = useState(false);
-  const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
   const [improvementRequest, setImprovementRequest] = useState("");
   const [songTitle, setSongTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
-  const [currentStyle, setCurrentStyle] = useState<MusicStyle>('Bollywood');
-  const [currentVoice, setCurrentVoice] = useState<Voice>('Vega');
-  const [voiceSampleCache, setVoiceSampleCache] = useState<Partial<Record<Voice, string>>>({});
-
+  const [currentStyle, setCurrentStyle] = useState("");
+  
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       prompt: "",
-      style: 'Bollywood',
-      voice: 'Vega',
+      style: 'Bollywood pop',
     },
   });
 
@@ -88,7 +76,6 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     setSongTitle(values.prompt); // Default title
     setCurrentPrompt(values.prompt);
     setCurrentStyle(values.style);
-    setCurrentVoice(values.voice);
     setImprovementRequest("");
 
     setIsLoadingLyrics(true);
@@ -99,7 +86,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
 
       setIsLoadingMusic(true);
       try {
-        const musicOutput = await composeMusic({ lyrics: lyricsOutput.lyrics, style: values.style, voice: values.voice });
+        const musicOutput = await composeMusic({ lyrics: lyricsOutput.lyrics, style: values.style, title: values.prompt });
         setMusicDescription(musicOutput.description);
         setMusicDataUri(musicOutput.musicDataUri);
         toast({ title: "Music Composed!", description: "Your song is ready to be played." });
@@ -128,7 +115,6 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       prompt: currentPrompt,
       lyrics,
       style: currentStyle,
-      voice: currentVoice,
       musicDataUri: musicDataUri || "",
       musicDescription,
       createdAt: new Date().toISOString(),
@@ -174,7 +160,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     }
     const link = document.createElement('a');
     link.href = musicDataUri;
-    link.download = `${songTitle.trim().replace(/ /g, '_')}.wav`;
+    link.download = `${songTitle.trim().replace(/ /g, '_')}.mp3`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -201,7 +187,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       // Re-compose music with new lyrics
       setIsLoadingMusic(true);
       try {
-        const musicOutput = await composeMusic({ lyrics: result.improvedLyrics, style: currentStyle, voice: currentVoice });
+        const musicOutput = await composeMusic({ lyrics: result.improvedLyrics, style: currentStyle, title: songTitle });
         setMusicDescription(musicOutput.description);
         setMusicDataUri(musicOutput.musicDataUri);
         toast({ title: "Music Re-Composed!", description: "Your song has been updated with the new lyrics." });
@@ -218,49 +204,6 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       setIsImprovingLyrics(false);
     }
   };
-  
-  const handlePreviewVoice = async (voice: Voice) => {
-    if (!voice) {
-      toast({ variant: "destructive", title: "No Voice Selected", description: "Please select a voice to preview." });
-      return;
-    }
-    // Check cache first
-    if (voiceSampleCache[voice]) {
-      const audio = new Audio(voiceSampleCache[voice]);
-      audio.play();
-      toast({ title: `Playing sample for ${voice} (from cache)` });
-      return;
-    }
-
-    setIsPreviewingVoice(true);
-    try {
-      const result = await generateVoiceSample({
-        voice: voice,
-        text: 'नमस्ते, मैं आपकी एआई गायिका हूँ।', // "Hello, I am your AI singer."
-      });
-      if (result.audioDataUri) {
-        // Store in cache
-        setVoiceSampleCache(prevCache => ({
-          ...prevCache,
-          [voice]: result.audioDataUri,
-        }));
-        
-        const audio = new Audio(result.audioDataUri);
-        audio.play();
-        toast({ title: `Playing sample for ${voice}` });
-      }
-    } catch (error) {
-      console.error('Voice preview error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Preview Error',
-        description: getAiErrorDescription(error),
-      });
-    } finally {
-      setIsPreviewingVoice(false);
-    }
-  };
-
 
   const isSongGenerated = lyrics && musicDescription;
   const isBusy = isLoadingLyrics || isLoadingMusic || isImprovingLyrics;
@@ -274,89 +217,39 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="prompt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-lg">Your Song Idea (Prompt)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., बारिश में एक कप चाय (A cup of tea in the rain)" {...field} className="text-base" />
-                  </FormControl>
-                  <FormDescription>
-                    Enter a short phrase or sentence in Hindi or English.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
                 control={form.control}
-                name="style"
+                name="prompt"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-lg">Musical Style</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="text-base">
-                          <SelectValue placeholder="Select a musical style" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {musicStyles.map(style => (
-                          <SelectItem key={style} value={style} className="text-base">
-                            {style}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormItem>
+                    <FormLabel className="text-lg">Your Song Idea (Prompt)</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., बारिश में एक कप चाय" {...field} className="text-base" />
+                    </FormControl>
                     <FormDescription>
-                      Choose the genre for your song.
+                        Enter a short phrase or sentence in Hindi or English.
                     </FormDescription>
                     <FormMessage />
-                  </FormItem>
+                    </FormItem>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="voice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-lg">Singer's Voice</FormLabel>
-                     <div className="flex items-center gap-2">
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                />
+                <FormField
+                    control={form.control}
+                    name="style"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="text-lg">Musical Style</FormLabel>
                         <FormControl>
-                            <SelectTrigger className="text-base">
-                            <SelectValue placeholder="Select a voice" />
-                            </SelectTrigger>
+                            <Input placeholder="e.g., Bollywood, pop, male singer" {...field} className="text-base" />
                         </FormControl>
-                        <SelectContent>
-                            {musicVoices.map(voice => (
-                            <SelectItem key={voice} value={voice} className="text-base">
-                                {voice}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handlePreviewVoice(field.value as Voice)}
-                            disabled={isPreviewingVoice || isBusy}
-                            aria-label="Preview voice"
-                        >
-                            {isPreviewingVoice ? <LoadingSpinner size={16} /> : <Play size={16} />}
-                        </Button>
-                    </div>
-                    <FormDescription>
-                      Choose the voice for your singer.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        <FormDescription>
+                            Enter style tags for Suno.
+                        </FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
             </div>
             <Button type="submit" size="lg" className="w-full text-lg" disabled={isBusy}>
               {isBusy && <LoadingSpinner size={20} className="mr-2" />}
@@ -424,7 +317,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             <CardContent className="flex justify-center items-center py-10">
                 <div className="flex flex-col items-center text-center w-full">
                   <LoadingSpinner size={48} />
-                  <p className="mt-4 text-muted-foreground font-body">Composing the perfect tune...</p>
+                  <p className="mt-4 text-muted-foreground font-body">Composing with Suno... this may take a minute.</p>
                 </div>
             </CardContent>
           </Card>
@@ -448,7 +341,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             {musicDataUri && (
               <CardFooter>
                 <Button onClick={handleDownloadMusic} variant="outline" disabled={!songTitle.trim()}>
-                  <Download className="mr-2 h-4 w-4" /> Download Music (.wav)
+                  <Download className="mr-2 h-4 w-4" /> Download Music (.mp3)
                 </Button>
               </CardFooter>
             )}
