@@ -7,6 +7,7 @@ import { useState } from "react";
 import { generateHindiLyrics } from "@/ai/flows/generate-hindi-lyrics";
 import { composeMusic } from "@/ai/flows/compose-music-from-lyrics";
 import { suggestLyricImprovements } from "@/ai/flows/suggest-lyric-improvements";
+import { suggestMusicStyle } from "@/ai/flows/suggest-music-style";
 import type { Song } from "@/types/song";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,6 @@ import { Sparkles, Music, Save, FileText, Download, Lightbulb, Copy } from "luci
 
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
-  style: z.string().min(3, { message: "Style must be at least 3 characters." }),
 });
 
 interface SongCreationFormProps {
@@ -65,7 +65,6 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       prompt: "",
-      style: 'Bollywood pop',
     },
   });
 
@@ -75,27 +74,14 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     setMusicDataUri(null);
     setSongTitle(values.prompt); // Default title
     setCurrentPrompt(values.prompt);
-    setCurrentStyle(values.style);
+    setCurrentStyle("");
     setImprovementRequest("");
 
     setIsLoadingLyrics(true);
     try {
-      const lyricsOutput = await generateHindiLyrics({ prompt: values.prompt, style: values.style });
+      const lyricsOutput = await generateHindiLyrics({ prompt: values.prompt });
       setLyrics(lyricsOutput.lyrics);
-      toast({ title: "Lyrics Generated!", description: "AI has crafted your song's lyrics." });
-
-      setIsLoadingMusic(true);
-      try {
-        const musicOutput = await composeMusic({ lyrics: lyricsOutput.lyrics, style: values.style, title: values.prompt });
-        setMusicDescription(musicOutput.description);
-        setMusicDataUri(musicOutput.musicDataUri);
-        toast({ title: "Music Composed!", description: "Your song is ready to be played." });
-      } catch (musicError) {
-        console.error("Music composition error:", musicError);
-        toast({ variant: "destructive", title: "Music Error", description: getAiErrorDescription(musicError) });
-      } finally {
-        setIsLoadingMusic(false);
-      }
+      toast({ title: "Lyrics Generated!", description: "AI has crafted your song's lyrics. Review them and compose the music!" });
     } catch (lyricsError) {
       console.error("Lyrics generation error:", lyricsError);
       toast({ variant: "destructive", title: "Lyrics Error", description: getAiErrorDescription(lyricsError) });
@@ -103,6 +89,33 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       setIsLoadingLyrics(false);
     }
   }
+
+  const handleComposeMusic = async () => {
+    if (!lyrics) {
+        toast({ variant: "destructive", title: "Missing Lyrics", description: "Cannot compose music without lyrics." });
+        return;
+    }
+    setIsLoadingMusic(true);
+    setMusicDescription(null);
+    setMusicDataUri(null);
+    try {
+      toast({ title: "Finding the perfect style..." });
+      const styleOutput = await suggestMusicStyle({ lyrics });
+      const suggestedStyle = styleOutput.style;
+      setCurrentStyle(suggestedStyle);
+      toast({ title: "Style Found!", description: `Composing in style: ${suggestedStyle}` });
+
+      const musicOutput = await composeMusic({ lyrics, style: suggestedStyle, title: songTitle });
+      setMusicDescription(musicOutput.description);
+      setMusicDataUri(musicOutput.musicDataUri);
+      toast({ title: "Music Composed!", description: "Your song is ready to be played." });
+    } catch (musicError) {
+      console.error("Music composition error:", musicError);
+      toast({ variant: "destructive", title: "Music Error", description: getAiErrorDescription(musicError) });
+    } finally {
+      setIsLoadingMusic(false);
+    }
+  };
 
   const handleSaveSong = () => {
     if (!lyrics || !musicDescription || !currentPrompt || !songTitle) {
@@ -173,7 +186,6 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
       return;
     }
     setIsImprovingLyrics(true);
-    // Clear old music
     setMusicDescription(null);
     setMusicDataUri(null);
     try {
@@ -182,21 +194,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
         improvementRequest,
       });
       setLyrics(result.improvedLyrics);
-      toast({ title: "Lyrics Improved!", description: "The AI has revised your lyrics. Re-composing music..." });
-
-      // Re-compose music with new lyrics
-      setIsLoadingMusic(true);
-      try {
-        const musicOutput = await composeMusic({ lyrics: result.improvedLyrics, style: currentStyle, title: songTitle });
-        setMusicDescription(musicOutput.description);
-        setMusicDataUri(musicOutput.musicDataUri);
-        toast({ title: "Music Re-Composed!", description: "Your song has been updated with the new lyrics." });
-      } catch (musicError) {
-        console.error("Music re-composition error:", musicError);
-        toast({ variant: "destructive", title: "Music Error", description: getAiErrorDescription(musicError) });
-      } finally {
-        setIsLoadingMusic(false);
-      }
+      toast({ title: "Lyrics Improved!", description: "The AI has revised your lyrics. You can now compose music with them." });
     } catch (error) {
       console.error("Lyric improvement error:", error);
       toast({ variant: "destructive", title: "Improvement Error", description: getAiErrorDescription(error) });
@@ -212,20 +210,19 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     <Card className="w-full shadow-xl">
       <CardHeader>
         <CardTitle className="text-3xl flex items-center gap-2"><Sparkles className="text-primary" /> Create Your Song</CardTitle>
-        <CardDescription>Enter a few words, choose a style, and let AI create a Hindi song for you!</CardDescription>
+        <CardDescription>Enter a few words, and let AI create a Hindi song for you in two simple steps!</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                 control={form.control}
                 name="prompt"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="text-lg">Your Song Idea (Prompt)</FormLabel>
+                    <FormLabel className="text-lg">Step 1: Your Song Idea (Prompt)</FormLabel>
                     <FormControl>
-                        <Input placeholder="e.g., बारिश में एक कप चाय" {...field} className="text-base" />
+                        <Input placeholder="e.g., बारिश में एक कप चाय" {...field} className="text-base" disabled={isBusy} />
                     </FormControl>
                     <FormDescription>
                         Enter a short phrase or sentence in Hindi or English.
@@ -234,26 +231,9 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                     </FormItem>
                 )}
                 />
-                <FormField
-                    control={form.control}
-                    name="style"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="text-lg">Musical Style</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Bollywood, pop, male singer" {...field} className="text-base" />
-                        </FormControl>
-                        <FormDescription>
-                            Enter style tags for Suno.
-                        </FormDescription>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
             <Button type="submit" size="lg" className="w-full text-lg" disabled={isBusy}>
-              {isBusy && <LoadingSpinner size={20} className="mr-2" />}
-              {isLoadingLyrics ? "Generating Lyrics..." : isLoadingMusic ? "Composing Music..." : isImprovingLyrics ? "Improving Lyrics..." : "Create Song"}
+              {isLoadingLyrics && <LoadingSpinner size={20} className="mr-2" />}
+              {isLoadingLyrics ? "Generating Lyrics..." : "Generate Lyrics"}
             </Button>
           </form>
         </Form>
@@ -270,6 +250,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
             <Card className="mt-8 bg-background/70">
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2"><FileText className="text-primary" /> Generated Lyrics</CardTitle>
+                <CardDescription>Review your lyrics below. You can edit them or ask the AI to improve them.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={10} className="text-base font-body whitespace-pre-wrap bg-background/80" />
@@ -302,9 +283,22 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                  </div>
                 <Button onClick={handleSuggestImprovements} disabled={isBusy || !improvementRequest.trim()} className="w-full">
                   {isImprovingLyrics && <LoadingSpinner size={20} className="mr-2" />}
-                  Suggest & Re-Compose
+                  Suggest Improvements
                 </Button>
               </CardContent>
+            </Card>
+
+            <Card className="mt-8 border-primary border-2 shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl flex items-center gap-2"><Music className="text-primary" /> Step 2: Compose Music</CardTitle>
+                    <CardDescription>Happy with the lyrics? Let Suno AI compose the music. The AI will automatically choose a style it thinks will sound best!</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={handleComposeMusic} size="lg" className="w-full text-lg" disabled={isBusy || !lyrics}>
+                        {isLoadingMusic && <LoadingSpinner size={20} className="mr-2" />}
+                        {isLoadingMusic ? "Composing with Suno..." : "Compose Music"}
+                    </Button>
+                </CardContent>
             </Card>
           </>
         )}
@@ -318,6 +312,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                 <div className="flex flex-col items-center text-center w-full">
                   <LoadingSpinner size={48} />
                   <p className="mt-4 text-muted-foreground font-body">Composing with Suno... this may take a minute.</p>
+                  {currentStyle && <p className="mt-2 text-sm text-primary font-bold">Style: {currentStyle}</p>}
                 </div>
             </CardContent>
           </Card>
@@ -326,7 +321,8 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
         {isSongGenerated && (
            <Card className="mt-8 bg-background/70">
             <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2"><Music className="text-primary" /> Music Composition</CardTitle>
+              <CardTitle className="text-2xl flex items-center gap-2"><Music className="text-primary" /> Music Composition Complete!</CardTitle>
+              {currentStyle && <CardDescription>Style: {currentStyle}</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-base font-body">{musicDescription}</p>

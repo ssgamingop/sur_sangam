@@ -1,5 +1,3 @@
-// This file is machine-generated - edit at your own risk!
-
 'use server';
 
 /**
@@ -19,10 +17,6 @@ const GenerateHindiLyricsInputSchema = z.object({
     .describe(
       'A short phrase or sentence in Hindi or English to generate lyrics from.'
     ),
-  style: z
-    .string()
-    .describe('The style of music for the song (e.g., "Bollywood pop, ballad").')
-    .optional(),
 });
 export type GenerateHindiLyricsInput = z.infer<
   typeof GenerateHindiLyricsInputSchema
@@ -45,7 +39,7 @@ const generateHindiLyricsPrompt = ai.definePrompt({
   name: 'generateHindiLyricsPrompt',
   input: {schema: GenerateHindiLyricsInputSchema},
   output: {schema: GenerateHindiLyricsOutputSchema},
-  prompt: `You are a professional Hindi songwriter. Compose a set of coherent and thematically relevant Hindi song lyrics based on the user provided prompt. The song should be written in the style of {{{style}}}, if a style is given. Pay attention to rhyme and meter, and create a song that is appropriate to be sung. Use traditional poetic devices such as similes, metaphors, alliteration and assonance to elevate the song.
+  prompt: `You are a professional Hindi songwriter. Compose a set of coherent and thematically relevant Hindi song lyrics based on the user provided prompt. Pay attention to rhyme and meter, and create a song that is appropriate to be sung. Use traditional poetic devices such as similes, metaphors, alliteration and assonance to elevate the song.
 
   Prompt: {{{prompt}}}`,
 });
