@@ -86,6 +86,7 @@ const composeMusicFlow = ai.defineFlow(
         "prompt": cleanedLyrics,
         "customMode": true,
         "instrumental": false,
+        "model": "v4.5",
         "title": input.title,
         "tags": input.style,
         "callBackUrl": "https://example.com/suno-webhook"
