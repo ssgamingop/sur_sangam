@@ -49,7 +49,7 @@ const composeMusicFlow = ai.defineFlow(
     }
 
     // Step 1: Initiate song generation
-    const generateResponse = await fetch('https://studio-api.suno.ai/api/generate/v2/', {
+    const generateResponse = await fetch('https://suno-api.suno.ai/api/generate/v2/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ const composeMusicFlow = ai.defineFlow(
       await sleep(5000); // Wait 5 seconds between polls
       attempts++;
 
-      const feedResponse = await fetch(`https://studio-api.suno.ai/api/feed/?ids=${clipIds.join(',')}`, {
+      const feedResponse = await fetch(`https://suno-api.suno.ai/api/feed/?ids=${clipIds.join(',')}`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
