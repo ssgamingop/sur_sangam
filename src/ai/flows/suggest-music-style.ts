@@ -20,8 +20,10 @@ export type SuggestMusicStyleInput = z.infer<typeof SuggestMusicStyleInputSchema
 const SuggestMusicStyleOutputSchema = z.object({
   style: z
     .string()
+    .min(15)
+    .max(200)
     .describe(
-      'A comma-separated list of musical style tags suitable for Suno, e.g., "Bollywood, pop, male singer, upbeat".'
+      'A detailed, comma-separated list of musical style tags for Suno, between 15 and 200 characters. e.g., "High-energy Bollywood dance track, synth melody, powerful female singer".'
     ),
 });
 export type SuggestMusicStyleOutput = z.infer<typeof SuggestMusicStyleOutputSchema>;
@@ -35,15 +37,15 @@ const suggestMusicStylePrompt = ai.definePrompt({
   input: {schema: SuggestMusicStyleInputSchema},
   output: {schema: SuggestMusicStyleOutputSchema},
   prompt: `You are an expert music producer with a keen sense of what makes a song go viral.
-  Your task is to analyze the following Hindi song lyrics and suggest the perfect musical style for it.
-  The style should be a short, comma-separated list of tags that the Suno API can understand.
-  Consider the mood, theme, and rhythm of the lyrics. Suggest a style that would sound best and have the potential to be a hit.
-  For example: "Bollywood pop, upbeat, male singer" or "Sad ballad, acoustic, female singer" or "Sufi rock, powerful vocals".
+  Your task is to analyze the following Hindi song lyrics and suggest a detailed musical style description for the Suno API.
+  The style should be a detailed, comma-separated list of tags between 15 and 200 characters.
+  It should capture the mood, genre, instrumentation, and vocal style.
+  For example: "A soulful ghazal with tabla and sitar, melancholic male vocals, slow tempo" or "High-energy Bollywood dance track, dhol beats, synth melody, powerful female singer, celebratory mood".
 
   Lyrics:
   {{{lyrics}}}
 
-  Based on these lyrics, provide the best musical style.
+  Based on these lyrics, provide the best musical style description.
   `,
 });
 

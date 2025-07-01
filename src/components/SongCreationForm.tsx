@@ -8,6 +8,7 @@ import { generateHindiLyrics } from "@/ai/flows/generate-hindi-lyrics";
 import { composeMusic } from "@/ai/flows/compose-music-from-lyrics";
 import { suggestLyricImprovements } from "@/ai/flows/suggest-lyric-improvements";
 import { suggestMusicStyle } from "@/ai/flows/suggest-music-style";
+import { suggestViralIdeas } from "@/ai/flows/suggest-viral-ideas";
 import type { Song } from "@/types/song";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +59,8 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [songTitle, setSongTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentStyle, setCurrentStyle] = useState("");
+  const [viralIdeas, setViralIdeas] = useState<string[]>([]);
+  const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
   
   const { toast } = useToast();
 
@@ -76,6 +79,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     setCurrentPrompt(values.prompt);
     setCurrentStyle("");
     setImprovementRequest("");
+    setViralIdeas([]);
 
     setIsLoadingLyrics(true);
     try {
@@ -203,8 +207,27 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     }
   };
 
+  const handleSuggestIdeas = async () => {
+    setIsLoadingIdeas(true);
+    setViralIdeas([]);
+    try {
+      const result = await suggestViralIdeas();
+      setViralIdeas(result.ideas);
+    } catch (error) {
+      console.error("Viral idea suggestion error:", error);
+      toast({ variant: "destructive", title: "Suggestion Error", description: getAiErrorDescription(error) });
+    } finally {
+      setIsLoadingIdeas(false);
+    }
+  };
+
+  const handleUseIdea = (idea: string) => {
+    form.setValue('prompt', idea);
+    setViralIdeas([]); // Hide suggestions after one is chosen
+  };
+
   const isSongGenerated = lyrics && musicDescription;
-  const isBusy = isLoadingLyrics || isLoadingMusic || isImprovingLyrics;
+  const isBusy = isLoadingLyrics || isLoadingMusic || isImprovingLyrics || isLoadingIdeas;
 
   return (
     <Card className="w-full shadow-xl">
@@ -227,6 +250,38 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
                     <FormDescription>
                         Enter a short phrase or sentence in Hindi or English.
                     </FormDescription>
+
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSuggestIdeas}
+                        disabled={isLoadingIdeas || isLoadingLyrics}
+                      >
+                        {isLoadingIdeas ? <LoadingSpinner size={16} className="mr-2" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+                        {isLoadingIdeas ? 'Getting Ideas...' : 'Need inspiration? Suggest ideas'}
+                      </Button>
+                      {viralIdeas.length > 0 && (
+                        <div className="mt-4 space-y-2 p-4 border rounded-md bg-background/50">
+                          <p className="text-sm font-medium text-muted-foreground">Click an idea to use it:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {viralIdeas.map((idea, index) => (
+                              <Button
+                                key={index}
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUseIdea(idea)}
+                              >
+                                {idea}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
                     <FormMessage />
                     </FormItem>
                 )}
