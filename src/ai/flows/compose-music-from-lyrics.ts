@@ -15,6 +15,26 @@ import {z} from 'genkit';
 // Helper function to cause a delay
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Cleans raw lyrics text to remove structural markers and production notes,
+ * preparing it for the Suno API.
+ * @param rawLyrics The original lyrics string with markers.
+ * @returns A cleaned string containing only lyrics.
+ */
+const cleanLyricsForSuno = (rawLyrics: string): string => {
+  if (!rawLyrics) return '';
+  const lines = rawLyrics.split('\n');
+  return lines
+    .map(line => line.trim())
+    // Filter out section headers like "Verse 1", "Chorus", etc.
+    .filter(line => !/^(Verse|Chorus|Intro|Outro|Bridge|Final Chorus)/i.test(line))
+    // Filter out lines that are only production notes like "(Soft Piano)"
+    .filter(line => !/^\(.*\)$/.test(line))
+    .filter(line => line.length > 0)
+    .join('\n');
+};
+
+
 const ComposeMusicInputSchema = z.object({
   lyrics: z.string().describe('The Hindi lyrics to compose music for.'),
   style: z.string().describe('The musical style tags for Suno, e.g., "Bollywood, pop, male singer".'),
@@ -48,6 +68,11 @@ const composeMusicFlow = ai.defineFlow(
       throw new Error('SUNO_API_KEY is not set in the environment variables.');
     }
 
+    const cleanedLyrics = cleanLyricsForSuno(input.lyrics);
+    if (!cleanedLyrics) {
+        throw new Error("The provided lyrics were empty after removing structural markers. Please provide valid lyrics.");
+    }
+
     const BASE_URL = "https://apibox.erweima.ai";
 
     // Step 1: Initiate song generation
@@ -58,10 +83,10 @@ const composeMusicFlow = ai.defineFlow(
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        "prompt": input.lyrics,
+        "prompt": cleanedLyrics,
         "customMode": true,
         "instrumental": false,
-        "model": "V3_5",
+        "model": "v3.5",
         "title": input.title,
         "tags": input.style,
         "callBackUrl": "https://example.com/suno-webhook"
