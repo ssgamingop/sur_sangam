@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -86,7 +87,7 @@ const composeMusicFlow = ai.defineFlow(
         "prompt": cleanedLyrics,
         "customMode": true,
         "instrumental": false,
-        "model": "v3.5",
+        "model": "v3",
         "title": input.title,
         "tags": input.style,
         "callBackUrl": "https://example.com/suno-webhook"
