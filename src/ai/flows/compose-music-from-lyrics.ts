@@ -64,6 +64,7 @@ const composeMusicFlow = ai.defineFlow(
         "model": "V3_5",
         "title": input.title,
         "tags": input.style,
+        "callBackUrl": "https://example.com/suno-webhook"
       }),
     });
 
