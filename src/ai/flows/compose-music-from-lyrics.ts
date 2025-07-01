@@ -48,8 +48,10 @@ const composeMusicFlow = ai.defineFlow(
       throw new Error('SUNO_API_KEY is not set in the environment variables.');
     }
 
+    const BASE_URL = "https://apibox.erweima.ai";
+
     // Step 1: Initiate song generation
-    const generateResponse = await fetch('https://suno-api-eta.vercel.app/api/generate', {
+    const generateResponse = await fetch(`${BASE_URL}/api/v1/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,70 +59,74 @@ const composeMusicFlow = ai.defineFlow(
       },
       body: JSON.stringify({
         "prompt": input.lyrics,
-        "make_instrumental": false,
-        "wait_audio": false,
-        "mv": "chirp-v3-0",
+        "customMode": true,
+        "instrumental": false,
+        "model": "V3_5",
         "title": input.title,
         "tags": input.style,
       }),
     });
 
-    if (!generateResponse.ok) {
-      const errorText = await generateResponse.text();
-      throw new Error(`Suno API generation failed: ${generateResponse.status} ${errorText}`);
+    const generateResult = await generateResponse.json();
+
+    if (generateResult.code !== 200) {
+        throw new Error(`Suno API generation failed: ${generateResult.msg || generateResponse.statusText}`);
     }
-
-    const generateData = await generateResponse.json();
-    const clipIds = generateData.map((clip: any) => clip.id);
-
+    
+    // The API might return one or two song clips for the same prompt
+    const clipIds = generateResult.data.map((clip: any) => clip.id);
+    
     // Step 2: Poll for completion
     let attempts = 0;
-    const maxAttempts = 24; // 24 attempts * 5 seconds = 120 seconds max wait time
+    const maxAttempts = 30; // 30 attempts * 5 seconds = 150 seconds max wait time
     let audioUrl: string | null = null;
+    let completedClipData: any = null;
 
     while (attempts < maxAttempts && !audioUrl) {
       await sleep(5000); // Wait 5 seconds between polls
       attempts++;
 
       for (const clipId of clipIds) {
-          const feedResponse = await fetch(`https://suno-api-eta.vercel.app/api/feed/${clipId}`, {
+          const feedResponse = await fetch(`${BASE_URL}/api/v1/feed/${clipId}`, {
+            method: 'GET',
             headers: { 'Authorization': `Bearer ${apiKey}` },
           });
-
+          
           if (!feedResponse.ok) {
             console.warn(`Suno API polling for clip ${clipId} failed: ${feedResponse.status}`);
-            continue; // Try the next clip
+            continue;
           }
           
-          const feedData = await feedResponse.json(); // This is now a single clip object
+          const feedResult = await feedResponse.json();
 
-          if (Array.isArray(feedData) && feedData.some(clip => clip.status === 'complete')) {
-             const completedClip = feedData.find(clip => clip.status === 'complete');
-             if(completedClip) {
-                audioUrl = completedClip.audio_url;
-                break;
-             }
+          if (feedResult.code !== 200) {
+              console.warn(`Suno API polling error for clip ${clipId}: ${feedResult.msg}`);
+              continue;
+          }
+          
+          const clipData = feedResult.data;
+
+          if (clipData && clipData.status === 'complete') {
+            audioUrl = clipData.audio_url;
+            completedClipData = clipData;
+            break; 
           }
 
-          if (feedData.status === 'complete') {
-            audioUrl = feedData.audio_url;
-            break; // Exit the inner for loop
-          }
-
-          if (feedData.status === 'error') {
-              throw new Error(`Suno song generation failed for clip ${feedData.id}.`);
+          if (clipData && clipData.status === 'error') {
+              throw new Error(`Suno song generation failed for clip ${clipData.id}: ${clipData.error_message || 'Unknown error'}`);
           }
       }
+      if (audioUrl) break;
     }
 
     if (!audioUrl) {
-      throw new Error('Suno song generation timed out after 2 minutes.');
+      throw new Error('Suno song generation timed out after 2.5 minutes.');
     }
 
     // Step 3: Download the audio and convert to data URI
     const audioResponse = await fetch(audioUrl);
     if (!audioResponse.ok) {
-        throw new Error(`Failed to download audio from Suno: ${audioResponse.status}`);
+        throw new Error(`Failed to download audio from Suno: ${audioResponse.statusText}`);
     }
 
     const audioBuffer = await audioResponse.arrayBuffer();
@@ -129,7 +135,7 @@ const composeMusicFlow = ai.defineFlow(
 
     return {
       musicDataUri: musicDataUri,
-      description: 'Music composed with the Suno API.',
+      description: completedClipData?.metadata?.prompt || 'Music composed with the Suno API.',
     };
   }
 );
