@@ -49,7 +49,7 @@ const composeMusicFlow = ai.defineFlow(
     }
 
     // Step 1: Initiate song generation
-    const generateResponse = await fetch('https://suno-api-rest.vercel.app/api/generate', {
+    const generateResponse = await fetch('https://suno-api-sigma.vercel.app/api/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ const composeMusicFlow = ai.defineFlow(
       attempts++;
 
       for (const clipId of clipIds) {
-          const feedResponse = await fetch(`https://suno-api-rest.vercel.app/api/feed/${clipId}`, {
+          const feedResponse = await fetch(`https://suno-api-sigma.vercel.app/api/feed/${clipId}`, {
             headers: { 'Authorization': `Bearer ${apiKey}` },
           });
 
