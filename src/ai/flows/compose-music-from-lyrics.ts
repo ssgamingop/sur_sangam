@@ -74,8 +74,14 @@ const composeMusicFlow = ai.defineFlow(
         throw new Error(`Suno API generation failed: ${generateResult.msg || generateResponse.statusText}`);
     }
     
-    // The API might return one or two song clips for the same prompt
-    const clipIds = generateResult.data.map((clip: any) => clip.id);
+    // The API might return a single clip object, an array of them, or nothing.
+    // This ensures we have a clean array of clip IDs to work with.
+    const clips = [].concat(generateResult.data || []);
+    const clipIds = clips.map((clip: any) => clip?.id).filter(Boolean);
+
+    if (clipIds.length === 0) {
+        throw new Error('Suno API did not return any processable clips.');
+    }
     
     // Step 2: Poll for completion
     let attempts = 0;
