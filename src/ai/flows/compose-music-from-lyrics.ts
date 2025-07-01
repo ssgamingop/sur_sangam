@@ -80,7 +80,10 @@ const composeMusicFlow = ai.defineFlow(
     const clipIds = clips.map((clip: any) => clip?.id).filter(Boolean);
 
     if (clipIds.length === 0) {
-        throw new Error('Suno API did not return any processable clips.');
+        if (generateResult.data) {
+          throw new Error(`Suno API returned a success code but the data was not in the expected format. Data: ${JSON.stringify(generateResult.data)}`);
+        }
+        throw new Error('Suno API did not return any processable clips. The service might be busy.');
     }
     
     // Step 2: Poll for completion
