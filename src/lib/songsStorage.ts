@@ -21,12 +21,14 @@ export const saveSongToLocalStorage = (song: Song): void => {
   }
   try {
     const songs = getSongsFromLocalStorage();
-    // Omit musicDataUri to avoid filling up localStorage
-    const { musicDataUri, ...songToSave } = song;
-    const updatedSongs = [songToSave, ...songs.filter(s => s.id !== song.id)]; // Add or update existing
+    // Add or update existing song by ID, now including the musicDataUri
+    const updatedSongs = [song, ...songs.filter(s => s.id !== song.id)];
     localStorage.setItem(SONGS_STORAGE_KEY, JSON.stringify(updatedSongs));
   } catch (error) {
     console.error("Error saving song to localStorage:", error);
+     if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      alert("Could not save song. Your browser's local storage is full. Please clear some space or delete older songs.");
+    }
   }
 };
 

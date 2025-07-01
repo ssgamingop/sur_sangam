@@ -48,6 +48,20 @@ export function SavedSongsList({ songs, totalSongs, onDeleteSong }: SavedSongsLi
     URL.revokeObjectURL(url);
     toast({ title: "Lyrics Download Started", description: "Check your downloads folder." });
   };
+  
+  const handleDownloadMusic = (song: Song) => {
+    if (!song.musicDataUri || !song.title.trim()) {
+      toast({ variant: "destructive", title: "Cannot Download", description: "Missing music data or a song title." });
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = song.musicDataUri;
+    link.download = `${song.title.trim().replace(/ /g, '_')}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Music Download Started", description: "Check your downloads folder." });
+  };
 
 
   if (totalSongs === 0) {
@@ -89,7 +103,20 @@ export function SavedSongsList({ songs, totalSongs, onDeleteSong }: SavedSongsLi
               </AccordionTrigger>
               <AccordionContent>
                 <CardContent className="pt-0 pb-6 px-6">
-                  <div className="space-y-4">
+                  <div className="space-y-6 pt-4">
+                    {song.musicDataUri && (
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-lg font-headline text-primary flex items-center gap-2"><Music size={20} /> Composed Music</h4>
+                           <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownloadMusic(song); }}>
+                              <Download size={16} className="mr-2" /> Download Music
+                            </Button>
+                        </div>
+                        <audio controls src={song.musicDataUri} className="w-full">
+                            Your browser does not support the audio element.
+                        </audio>
+                      </div>
+                    )}
                     <div>
                       <div className="flex justify-between items-center mb-2">
                          <h4 className="text-lg font-headline text-primary flex items-center gap-2"><FileText size={20} /> Lyrics</h4>
