@@ -99,19 +99,14 @@ const composeMusicFlow = ai.defineFlow(
         throw new Error(`Suno API generation failed: ${generateResult.msg || generateResponse.statusText}`);
     }
     
-    // The API might return a single clip object, an array of them, or nothing.
-    // This ensures we have a clean array of clip IDs to work with.
-    const clips = [].concat(generateResult.data || []);
-    const clipIds = clips.map((clip: any) => clip?.id).filter(Boolean);
+    const taskId = generateResult.data?.taskId;
 
-    if (clipIds.length === 0) {
-        if (generateResult.data) {
-          throw new Error(`Suno API returned a success code but the data was not in the expected format. Data: ${JSON.stringify(generateResult.data)}`);
-        }
-        throw new Error('Suno API did not return any processable clips. The service might be busy.');
+    if (!taskId) {
+        const errorDetails = generateResult.data ? JSON.stringify(generateResult.data) : 'no data';
+        throw new Error(`Suno API did not return a taskId. Response data: ${errorDetails}`);
     }
     
-    // Step 2: Poll for completion
+    // Step 2: Poll for completion using the taskId
     let attempts = 0;
     const maxAttempts = 30; // 30 attempts * 5 seconds = 150 seconds max wait time
     let audioUrl: string | null = null;
@@ -121,37 +116,39 @@ const composeMusicFlow = ai.defineFlow(
       await sleep(5000); // Wait 5 seconds between polls
       attempts++;
 
-      for (const clipId of clipIds) {
-          const feedResponse = await fetch(`${BASE_URL}/api/v1/feed/${clipId}`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${apiKey}` },
-          });
-          
-          if (!feedResponse.ok) {
-            console.warn(`Suno API polling for clip ${clipId} failed: ${feedResponse.status}`);
-            continue;
-          }
-          
-          const feedResult = await feedResponse.json();
+      const feedResponse = await fetch(`${BASE_URL}/api/v1/feed/${taskId}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+      
+      if (!feedResponse.ok) {
+        console.warn(`Suno API polling for task ${taskId} failed: ${feedResponse.status}`);
+        continue;
+      }
+      
+      const feedResult = await feedResponse.json();
 
-          if (feedResult.code !== 200) {
-              console.warn(`Suno API polling error for clip ${clipId}: ${feedResult.msg}`);
-              continue;
-          }
-          
-          const clipData = feedResult.data;
+      if (feedResult.code !== 200) {
+          console.warn(`Suno API polling error for task ${taskId}: ${feedResult.msg}`);
+          continue;
+      }
+      
+      // The poll response can contain one or more clips. We find the first completed one.
+      const clips = [].concat(feedResult.data || []);
 
+      for (const clipData of clips) {
           if (clipData && clipData.status === 'complete') {
             audioUrl = clipData.audio_url;
             completedClipData = clipData;
-            break; 
+            break; // Exit the inner loop once a completed clip is found
           }
 
           if (clipData && clipData.status === 'error') {
               throw new Error(`Suno song generation failed for clip ${clipData.id}: ${clipData.error_message || 'Unknown error'}`);
           }
       }
-      if (audioUrl) break;
+
+      if (audioUrl) break; // Exit the while loop
     }
 
     if (!audioUrl) {
