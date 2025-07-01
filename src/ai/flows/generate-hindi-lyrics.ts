@@ -39,82 +39,90 @@ const generateHindiLyricsPrompt = ai.definePrompt({
   name: 'generateHindiLyricsPrompt',
   input: {schema: GenerateHindiLyricsInputSchema},
   output: {schema: GenerateHindiLyricsOutputSchema},
-  prompt: `You are an expert Hindi songwriter and music producer. Your task is to write a complete song based on a user's prompt. The song must have a clear structure including an Intro, multiple Verses, a recurring Chorus, a Bridge, and an Outro.
+  prompt: `You are an expert Hindi songwriter and music producer. Your task is to write a complete song based on a user's prompt.
 
-You must also include production notes in parentheses, like (Soft Piano) or (Whisper tone), to suggest the musical arrangement and mood for each section.
+**Instructions:**
+1.  The song must have a clear structure: Intro, Verse 1, Chorus, Verse 2, Chorus, Bridge, Final Chorus, and Outro.
+2.  Write the lyrics in Hindi using the Roman script (Hinglish).
+3.  Include production notes in parentheses on their own lines, like \`(Soft Piano)\` or \`(Whisper tone)\`. **These notes are for musical direction ONLY and are not part of the sung lyrics.** The AI that will sing this song will ignore anything inside parentheses.
+4.  Do NOT include any emojis in your response.
 
 Here is a perfect example of the structure and quality I expect. Use this as your guide:
 
 **Example Song:**
 
-🕰️ Intro (Soft Piano + Ambient Pads)
-
+Intro
+(Soft Piano + Ambient Pads)
 (Whisper tone)
-तू जब आई, रुका सा वक्त था,
-तेरी मुस्कान में... एक पूरी दास्ताँ थी।
-🎶 Verse 1
+Tu jab aayi, ruka sa waqt tha,
+Teri muskaan mein... ek poori dastaan thi.
 
-पहली नज़र में कुछ तो था,
-दिल ने कहा — ये वही है शायद।
-तेरे बिना जो अधूरा था,
-आज वो पल भी पूरा सा लगा।
+Verse 1
+(Music builds slightly)
+Pehli nazar mein kuch toh tha,
+Dil ne kaha — yeh wahi hai shayad.
+Tere bina jo adhoora tha,
+Aaj woh pal bhi poora sa laga.
 
-चलते-चलते जब तुझसे टकराया,
-सांसें जैसे रुक सी गईं।
-तेरे होने का जो असर था,
-वो रूह तक उतर गई।
-🌅 Chorus (Golden Hook, full melody)
+Chalte-chalte jab tujhse takraya,
+Saansein jaise ruk si gayin.
+Tere hone ka jo asar tha,
+Woh rooh tak utar gayi.
 
-    वो पल, जब तू मेरे साथ थी,
-    जैसे वक्त ठहर गया था वहीं।
-    हर रंग उसमें ढलने लगा,
-    जब तू सामने मुस्कुरा दी।
-    ओओ... वो तेरा साथ था,
-    जैसे खुदा की मेहरबानी।
+Chorus
+(Golden Hook, full melody)
+Woh pal, jab tu mere saath thi,
+Jaise waqt theher gaya tha wahin.
+Har rang usmein dhalne laga,
+Jab tu saamne muskura di.
+Ooo... woh tera saath tha,
+Jaise Khuda ki meharbaani.
 
-🎶 Verse 2
+Verse 2
+(Music softens again)
+Chandni raat mein, tere bol jaise,
+Koi saaz baja ho dheere-dheere.
+Teri baaton mein woh asar tha,
+Har gham jaise mit sa gaya.
 
-चाँदनी रात में, तेरे बोल जैसे,
-कोई साज बजा हो धीरे-धीरे।
-तेरी बातों में वो असर था,
-हर ग़म जैसे मिट सा गया।
+Tu mili jaise kavita adhoori ko,
+Mil gaya koi poora sher.
+Tere aane se har khwab mera,
+Ab jeene layak ho gaya.
 
-तू मिली जैसे कविता अधूरी को,
-मिल गया कोई पूरा शेर।
-तेरे आने से हर ख्वाब मेरा,
-अब जीने लायक हो गया।
-🌅 Chorus (Repeat with Harmony)
+Chorus
+(Repeat with Harmony)
+Woh pal, jab tu mere saath thi,
+Jaise waqt theher gaya tha wahin.
+Har rang usmein dhalne laga,
+Jab tu saamne muskura di.
+Ooo... woh tera saath tha,
+Jaise Khuda ki meharbaani.
 
-    वो पल, जब तू मेरे साथ थी,
-    जैसे वक्त ठहर गया था वहीं।
-    हर रंग उसमें ढलने लगा,
-    जब तू सामने मुस्कुरा दी।
-    ओओ... वो तेरा साथ था,
-    जैसे खुदा की मेहरबानी।
+Bridge
+(Softly sung, rising emotion)
+Tera naam mere har saans mein,
+Teri baat har khamoshi mein.
+Tu hai toh hai roshni bhi,
+Tere bina sab adhoori si.
 
-🌌 Bridge (Softly sung, rising emotion)
+Final Chorus
+(Epic + Reverb layers)
+Woh pal, jab tu mere saath thi,
+Jaise waqt theher gaya tha wahin.
+Tu hansi aur main kho gaya,
+Tere pyaar mein hi main dhal gaya.
+Ooo... tera saath tha,
+Jaise Khuda ki meharbaani.
 
-तेरा नाम मेरे हर साँस में,
-तेरी बात हर खामोशी में।
-तू है तो है रोशनी भी,
-तेरे बिना सब अधूरी सी।
-🌅 Final Chorus (Epic + Reverb layers)
-
-    वो पल, जब तू मेरे साथ थी,
-    जैसे वक्त ठहर गया था वहीं।
-    तू हँसी और मैं खो गया,
-    तेरे प्यार में ही मैं ढल गया।
-    ओओ... तेरा साथ था,
-    जैसे खुदा की मेहरबानी।
-
-🎧 Outro (Piano fading out)
-
+Outro
+(Piano fading out)
 (Spoken whisper)
-"कुछ लम्हें... हमेशा के लिए होते हैं।"
+"Kuch lamhein... hamesha ke liye hote hain."
 
 **Your Task:**
 
-Now, write a new, original song in Hindi (using the Roman script) based on the following user prompt. Follow the exact same structure and style as the example above. Return only the generated song lyrics and nothing else.
+Now, write a new, original song in Hindi (using the Roman script) based on the following user prompt. Follow the exact same structure and style as the example above. Return ONLY the generated song lyrics and nothing else.
 
 **User Prompt:** {{{prompt}}}
 `,
