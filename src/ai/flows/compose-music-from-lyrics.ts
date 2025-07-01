@@ -49,16 +49,16 @@ const composeMusicFlow = ai.defineFlow(
     }
 
     // Step 1: Initiate song generation
-    const generateResponse = await fetch('https://suno-api.suno.ai/api/generate/v2/', {
+    const generateResponse = await fetch('https://suno-api-rest.vercel.app/api/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        "gpt_description_prompt": input.lyrics,
-        "prompt": "", // custom mode takes lyrics from gpt_description_prompt
+        "prompt": input.lyrics,
         "make_instrumental": false,
+        "wait_audio": false,
         "mv": "chirp-v3-0",
         "title": input.title,
         "tags": input.style,
@@ -71,43 +71,45 @@ const composeMusicFlow = ai.defineFlow(
     }
 
     const generateData = await generateResponse.json();
-    const clipIds = generateData.clips.map((clip: any) => clip.id);
+    const clipIds = generateData.map((clip: any) => clip.id);
 
     // Step 2: Poll for completion
     let attempts = 0;
     const maxAttempts = 24; // 24 attempts * 5 seconds = 120 seconds max wait time
     let audioUrl: string | null = null;
 
-    while (attempts < maxAttempts) {
+    while (attempts < maxAttempts && !audioUrl) {
       await sleep(5000); // Wait 5 seconds between polls
       attempts++;
 
-      const feedResponse = await fetch(`https://suno-api.suno.ai/api/feed/?ids=${clipIds.join(',')}`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      });
+      for (const clipId of clipIds) {
+          const feedResponse = await fetch(`https://suno-api-rest.vercel.app/api/feed/${clipId}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+          });
 
-      if (!feedResponse.ok) {
-        // Continue polling even if one check fails, but log it
-        console.warn(`Suno API polling failed: ${feedResponse.status}`);
-        continue;
-      }
+          if (!feedResponse.ok) {
+            console.warn(`Suno API polling for clip ${clipId} failed: ${feedResponse.status}`);
+            continue; // Try the next clip
+          }
+          
+          const feedData = await feedResponse.json(); // This is now a single clip object
 
-      const feedData = await feedResponse.json();
-      
-      // Find the first completed clip
-      const completedClip = feedData.find((clip: any) => clip.status === 'complete');
+          if (Array.isArray(feedData) && feedData.some(clip => clip.status === 'complete')) {
+             const completedClip = feedData.find(clip => clip.status === 'complete');
+             if(completedClip) {
+                audioUrl = completedClip.audio_url;
+                break;
+             }
+          }
 
-      if (completedClip) {
-        audioUrl = completedClip.audio_url;
-        break; // Exit loop once a song is ready
-      }
+          if (feedData.status === 'complete') {
+            audioUrl = feedData.audio_url;
+            break; // Exit the inner for loop
+          }
 
-      // Check for errors
-      const erroredClip = feedData.find((clip: any) => clip.status === 'error');
-      if (erroredClip) {
-          throw new Error(`Suno song generation failed for clip ${erroredClip.id}.`);
+          if (feedData.status === 'error') {
+              throw new Error(`Suno song generation failed for clip ${feedData.id}.`);
+          }
       }
     }
 
