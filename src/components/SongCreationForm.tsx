@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { Sparkles, Music, FileText, Download, Lightbulb, Copy } from "lucide-react";
 
+// Zod schema to validate the user's prompt
 const formSchema = z.object({
   prompt: z.string().min(5, { message: "Prompt must be at least 5 characters." }).max(200),
 });
@@ -37,11 +37,17 @@ interface SongCreationFormProps {
   onSongSaved: (song: Song) => void;
 }
 
+/**
+ * Converts AI error objects into user-friendly error messages
+ * Handles rate limiting, missing API keys, and generic errors
+ */
 function getAiErrorDescription(error: unknown): string {
   if (error instanceof Error) {
+    // Check for API rate limiting (quota exceeded)
     if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
       return 'You have exceeded the daily free API limit. Please try again tomorrow.';
     }
+    // Check for missing Suno API configuration
     if (error.message.includes('SUNO_API_KEY')) {
         return 'The Suno API key is missing. Please ask the developer to configure it.';
     }
@@ -50,6 +56,7 @@ function getAiErrorDescription(error: unknown): string {
 }
 
 export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
+  // State management for the song creation process
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isLoadingMusic, setIsLoadingMusic] = useState(false);
@@ -60,6 +67,7 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
   const [viralIdeas, setViralIdeas] = useState<string[]>([]);
   const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
   
+  // Toast notification system for user feedback
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -69,7 +77,12 @@ export function SongCreationForm({ onSongSaved }: SongCreationFormProps) {
     },
   });
 
+  /**
+   * Handle form submission: Generate Hindi lyrics from user prompt
+   * This is Step 1 of the song creation process
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Reset state for a fresh song creation
     setLyrics(null);
     setCurrentPrompt(values.prompt);
     setCurrentStyle("");
